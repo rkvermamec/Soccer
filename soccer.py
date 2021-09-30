@@ -1,176 +1,185 @@
 import pygame
 import random
 import math
-import itertools
-import sys
-
-global playerx,playery,b_playery,b_playerx
 
 pygame.init()
-#screen = pygame.display.set_mode((570,726))
-win = pygame.display.set_mode((600,600))
-#background = pygame.image.load('soccer.png')
+ground = (500, 600)
+goal_position = (210, 290)
+open_ground = 20
+global players
+global center_player
+global middle_player
+screen = pygame.display.set_mode(ground)
+red_player_image = pygame.transform.scale(pygame.image.load('red.png'),(30,30))
+blue_player_image = pygame.transform.scale(pygame.image.load('blue.png'),(25,25))
+ball_image = pygame.transform.scale(pygame.image.load('football-ball.png'),(10,10))
+global ball_position_update_by
 
+class player:
+    def __init__(self): 
+        self.position = None
+        self.goal_position = None
+        self.huristic = None
+        self.team = None
+        self.id = None
 
-
-def drawGrid(w,rows,surface):
-        sizeBtwn = w // rows
-        x=0 
-        y=0
-        for l in range(rows):
-             x=x+sizeBtwn
-             y = y+sizeBtwn
-             pygame.draw.line(surface,(255,255,255),(x,0),(x,w))
-             pygame.draw.line(surface,(255,255,255),(0,y),(w,y))
-
-rplayer = pygame.image.load('red.png')
-redplayer = pygame.transform.scale(rplayer,(30,30))
-
-bplayer = pygame.image.load('blue.png')
-blueplayer = pygame.transform.scale(bplayer,(30,30))
-
-ball = pygame.image.load('football-ball.png')
-ball = pygame.transform.scale(ball,(20,20))
-
-
-
-playerx=random.randint(20,400)
-playery=random.randint(40,280)
-
-b_playerx=random.randint(30,400)
-b_playery=random.randint(40,300)
-
-
-
-p1_x,p1_y  = 300,20
-center_player_x ,center_player_y = 300, 300
-p3_x,p3_y  = b_playerx+100,b_playery+40
-p4_x,p4_y  = b_playerx+150,b_playery+40
-
-r1_x,r1_y = 280,20
-r2_x,r2_y = playerx+100,playery+10
-r3_x,r3_y = playerx+150,playery+50
-
-
-def create_blueplayer():
-    global b_playery,b_playerx
-
-    
-    
+class ground_layout:
+    def __init__(self): 
+        self.ground_background = (57,120,25)
+        self.layout_color = (255,255,255)
+        self.goal_red_color = (255,0,0)
+        self.goal_blue_color = (7,55,99)
+        self.red_area_box = (
+            (ground[0] - int(ground[0] * 0.8), open_ground),
+            (int(ground[0] * 0.8), open_ground), 
+            (ground[0] - int(ground[0] * 0.8), int(ground[1] * 0.2)),
+            (int(ground[0] * 0.8), int(ground[1] * 0.2)))
+        self.blue_area_box = (
+            (ground[0] - int(ground[0] * 0.8), ground[1] - open_ground),
+            (int(ground[0] * 0.8), ground[1] - open_ground), 
+            (ground[0] - int(ground[0] * 0.8), ground[1] - int(ground[1] * 0.2)),
+            (int(ground[0] * 0.8), ground[1] - int(ground[1] * 0.2)))
+        self.playing_area_box = (
+            (open_ground, open_ground),
+            (ground[0] - open_ground, open_ground),
+            (open_ground, ground[1] - open_ground),
+            (ground[0] - open_ground, ground[1] - open_ground))
         
-    win.blit(blueplayer,(p1_x,p1_y))
-    win.blit(blueplayer,(center_player_x,center_player_y))
-    win.blit(blueplayer,(p3_x,p3_y))
-    win.blit(blueplayer,(p4_x,p4_y ))
+def drawGrid(grnd):
+    #background
+    screen.fill(grnd.ground_background)
+    #outer Line
+    pygame.draw.line(screen, grnd.layout_color, grnd.playing_area_box[0], grnd.playing_area_box[1])
+    pygame.draw.line(screen, grnd.layout_color, grnd.playing_area_box[0], grnd.playing_area_box[2])
+    pygame.draw.line(screen, grnd.layout_color, grnd.playing_area_box[3], grnd.playing_area_box[1])
+    pygame.draw.line(screen, grnd.layout_color, grnd.playing_area_box[3], grnd.playing_area_box[2])
+    #Red Player Box
+    pygame.draw.line(screen, grnd.layout_color, grnd.red_area_box[0], grnd.red_area_box[1])
+    pygame.draw.line(screen, grnd.layout_color, grnd.red_area_box[0], grnd.red_area_box[2])
+    pygame.draw.line(screen, grnd.layout_color, grnd.red_area_box[3], grnd.red_area_box[1])
+    pygame.draw.line(screen, grnd.layout_color, grnd.red_area_box[3], grnd.red_area_box[2])
+    #Blue Player Box
+    pygame.draw.line(screen, grnd.layout_color, grnd.blue_area_box[0], grnd.blue_area_box[1])
+    pygame.draw.line(screen, grnd.layout_color, grnd.blue_area_box[0], grnd.blue_area_box[2])
+    pygame.draw.line(screen, grnd.layout_color, grnd.blue_area_box[3], grnd.blue_area_box[1])
+    pygame.draw.line(screen, grnd.layout_color, grnd.blue_area_box[3], grnd.blue_area_box[2])
+    #Center Circle
+    pygame.draw.circle(screen, grnd.layout_color, (ground[0] // 2, ground[1] // 2), 30)
+    pygame.draw.circle(screen, grnd.ground_background, (ground[0] // 2, ground[1] // 2), 28)
+    #center Line
+    pygame.draw.line(screen, grnd.layout_color, (open_ground, ground[1] // 2), (ground[0] - open_ground, ground[1] // 2))
+    #Goal Post
+    pygame.draw.rect(screen, grnd.goal_red_color, pygame.Rect(goal_position[0], 0, goal_position[1] - goal_position[0], open_ground))
+    pygame.draw.rect(screen, grnd.goal_blue_color, pygame.Rect(goal_position[0], ground[1] - open_ground, goal_position[1] - goal_position[0], open_ground))
+        
 
-def create_redplayer():
-     global playery,playerx
 
-     win.blit(redplayer,(r1_x,r1_y))
-     win.blit(redplayer,(r2_x,r2_y))
-     win.blit(redplayer,(r3_x,r3_y))
+def initPlayer(grnd):
+    global center_player
+    center_player = createPlayers('BLUE', 0, (ground[0] // 2, ground[1] // 2))
+    global players
+    players = []
+    # Red Box Player
+    players.append(createPlayers('BLUE', 1, 
+        (random.randint(grnd.red_area_box[0][0]+15, grnd.red_area_box[1][0]-15), random.randint(grnd.red_area_box[0][1]+15, grnd.red_area_box[2][1]-15))))
+    players.append(createPlayers('RED', 1, 
+        (random.randint(grnd.red_area_box[0][0]+15, grnd.red_area_box[1][0]-15), random.randint(grnd.red_area_box[0][1]+15, grnd.red_area_box[2][1]-15))))
+    # Outer Player
+    players.append(createPlayers('BLUE', 2, 
+        (random.randint(open_ground+15, ground[0] - open_ground-15), random.randint(grnd.red_area_box[2][1]+15, ground[0]//2 -15))))
+    players.append(createPlayers('RED', 2, 
+        (random.randint(open_ground+15, ground[0] - open_ground-15), random.randint(grnd.red_area_box[2][1]+15, ground[0]//2 -15))))
+    players.append(createPlayers('BLUE', 3, 
+        (random.randint(open_ground+15, ground[0] - open_ground-15), random.randint(grnd.red_area_box[2][1]+15, ground[0]//2 -15))))
+    players.append(createPlayers('RED', 3, 
+        (random.randint(open_ground+15, ground[0] - open_ground-15), random.randint(grnd.red_area_box[2][1]+15, ground[0]//2 -15))))
+        
+def createPlayers(team, id, position):
+    p = player()
+    p.position = position
+    p.team = team
+    p.id = id
+    if p.position[0] < goal_position[0]:
+        p.goal_position = (goal_position[0], open_ground)
+    elif p.position[0] > goal_position[1]:
+        p.goal_position = (goal_position[1], open_ground)
+    else:
+        p.goal_position = (p.position[0], open_ground)
+    p.huristic = math.sqrt((p.position[0] - p.goal_position[0]) ** 2 + (p.position[1] - p.goal_position[1]) ** 2)
+    return p
 
-def create_ball(ball,x):
-    win.blit(ball,(x[0],x[1]))
+def display_players():
+    global players
+    for p in players:
+        img = red_player_image
+        if p.team == 'BLUE':
+            img = blue_player_image
+        pos = (p.position[0] - 15, p.position[1] - 15)
+        screen.blit(img, pos)
+
+    pos = (center_player.position[0]-15, center_player.position[1] + 5)
+    screen.blit(blue_player_image, pos)
     
-
-   
-def euclidean_dis (x1,x2,y1,y2):
-    dis = math.sqrt((x2-x1)**2+(y2-y1)**2)
-    print(dis)
-    return dis
-
-
-#Calculating the distance between center player and other team mates
-
-
-def dis(start,end):
-    dist = math.dist(start,end)
-    return int(dist)
-
-def clearscreen(b):
-    b.set_alpha(0)
-    
-
-
-list_blueteam = [[p3_x,p3_y],[p4_x,p4_y],[p1_x,p1_y]]
-d=[]
+def find_path():
+    global center_player
+    global players
+    global middle_player
+    cost = ground[1]
+    middle_player = None
+    for p in players:
+        if center_player.team == p.team:
+            tmp = p.huristic + math.sqrt((p.position[0] - center_player.position[0]) ** 2 + (p.position[1] - center_player.position[1]) ** 2)
+            if cost > tmp:
+                cost = tmp
+                middle_player = p
  
 
+def play_game(grnd, ball_position):
+    drawGrid(grnd)
+    display_players()
+    screen.blit(ball_image, ball_position)
+
+def init_game(grnd):
+    global middle_player
+    initPlayer(grnd)
+    ball_latest_position = (ground[0] // 2-5, ground[1] // 2-5)
+    find_path()
+    cost = (math.sqrt((middle_player.position[0] - center_player.position[0]) ** 2 + (middle_player.position[1] - center_player.position[1]) ** 2)) // 4
+    return ball_latest_position, ((middle_player.position[0] - center_player.position[0])/cost, (middle_player.position[1] - center_player.position[1])/cost, cost, True)
+
+def forward_ball():
+    global middle_player
+    cost = middle_player.huristic // 4
+    return ((middle_player.goal_position[0] - middle_player.position[0])/cost, (middle_player.goal_position[1] - middle_player.position[1])/cost, cost, False)
 
 
-for coords in list_blueteam:
-    distance = euclidean_dis(center_player_x,coords[0],center_player_y,coords[1])
-    print(center_player_x,coords[0],center_player_y,coords[1])
-    d.append(distance)
-    print(d)
+def main():
+    global ball_position_update_by
+    grnd = ground_layout()
+    ball_latest_position, ball_position_update_by = init_game(grnd)
+    play_game(grnd, ball_latest_position)
 
-
-
-
-def combination_length(startpoint,combination):
-        length=0
-        previous = startpoint
-        for elem in combination:
-            length+= dis(previous,elem)
-
-        return int(length)
-
-def get_shortest_path(start_point,list_of_point):
-        min = sys.maxsize
-        combination_min = None
-        list_of_combinations = list(itertools.permutations(list_blueteam))
-        for combination in list_of_combinations:
-            length = combination_length(start_point,combination)
-            if length<min:
-                min=length
-                combination_min=combination
-        return combination_min
-
-path = get_shortest_path([center_player_x,center_player_y],list_blueteam )
-print(path)
-
-    
-
-dead = False
-while(dead==False):
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            dead = True
-    #screen.blit(background,[0,0])
-    drawGrid(600,10,win)
-    create_redplayer()
-    create_blueplayer()
-    create_ball(ball,[300,280])
-    
-    pygame.display.update()
-
-    events = pygame.event.get()
-    for event in events:
-        if event.type==pygame.KEYDOWN:
-
-           if event.key == pygame.K_UP: 
-                for i in path:
-                    
-                    create_ball(ball,i)
-                    pygame.display.update()
-    
-                
-    
+    clk = pygame.time.Clock()
+    flag = True
+    while flag:
+        pygame.display.update()
+        ball_latest_position = (ball_latest_position[0] + ball_position_update_by[0], ball_latest_position[1] + ball_position_update_by[1])
+        ball_position_update_by = (ball_position_update_by[0], ball_position_update_by[1], ball_position_update_by[2]-1, ball_position_update_by[3])
+        if ball_position_update_by[2] < 0:
+            if ball_position_update_by[3]:
+                ball_position_update_by = forward_ball()
+                pygame.time.delay(150)
+                clk.tick(5)
+            else:
+                ball_latest_position, ball_position_update_by = init_game(grnd)
+                pygame.time.delay(250)
+                clk.tick(5)
+        else:
+            pygame.time.delay(25)
+            clk.tick(5)
+        
+        play_game(grnd, ball_latest_position)
         
 
-        
-    
-                
-                    
-                
-            
-                
-        
-                
-            
-    
-    
-    
-    
-
+if __name__ == '__main__':
+    main()
